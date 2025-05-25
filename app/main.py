@@ -1,33 +1,53 @@
-# app/main.py
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.auth.routes import router as auth_router
+
+# IMPORTER LES ROUTEURS DIRECTEMENT DEPUIS LEURS FICHIERS RESPECTIFS
+from app.routers.users import router as users_router
+from app.routers.maisons import router as maisons_router
+from app.routers.chambres import router as chambres_router
+from app.routers.contrats import router as contrats_router
+from app.routers.paiements import router as paiements_router
+from app.routers.rendez_vous import router as rendez_vous_router
+from app.routers.medias import router as medias_router
+from app.routers.problemes import router as problemes_router
+from app.routers.recherche import router as recherche_router # <-- AJOUTEZ CETTE LIGNE
+
 from app.database import Base, engine
 
-from fastapi.middleware.cors import CORSMiddleware # Import CORSMiddleware
-# Initialisation des tables de la base de données
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Hebergement - Backend API")
+app = FastAPI(title="Hebergement - API Backend")
 
-# Configure CORS
+# Configurer CORS
 origins = [
-    "http://localhost:3000",  # Allow your React frontend (CRA default)
-    "http://localhost:5173",  # Allow your React frontend (Vite default)
-    # Add any other origins where your frontend might be hosted, e'g'
-    # "http://127.0.0.1:3000",
-    # "http://127.0.0.1:5173",
-    # "http://your-production-frontend-domain.com",
+    "http://localhost:3000",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # List of allowed origins
-    allow_credentials=True,      # Allow cookies to be sent with requests (important for authentication)
-    allow_methods=["*"],         # Allow all HTTP methods (GET, POST, PUT, DELETE, OPTIONS, etc.)
-    allow_headers=["*"],         # Allow all headers (e.g., Authorization header for JWT)
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-
-# Inclusion des routes d'authentification
 app.include_router(auth_router)
+
+# INCLUSION DES NOUVEAUX ROUTEURS CRUD
+app.include_router(users_router)
+app.include_router(maisons_router)
+app.include_router(chambres_router)
+app.include_router(contrats_router)
+app.include_router(paiements_router)
+app.include_router(rendez_vous_router)
+app.include_router(medias_router)
+app.include_router(problemes_router)
+app.include_router(recherche_router) # <-- AJOUTEZ CETTE LIGNE
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Bienvenue sur l'API Backend de Hebergement"}

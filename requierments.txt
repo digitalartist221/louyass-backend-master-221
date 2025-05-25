@@ -1,9 +1,4 @@
-fastapi
-uvicorn
-sqlalchemy
-pydantic
-passlib[bcrypt]
-python-jose[cryptography]
+pip install fastapi uvicorn sqlalchemy pydantic passlib[bcrypt] python-jose[cryptography]
 pip install pydantic[email]
 pip install passlib[bcrypt]
 pip install python-jose

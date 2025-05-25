@@ -1,39 +1,48 @@
-# app/auth/routes.py
-
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.schemas import UserCreate, UserResponse
+from app.schemas import UserCreate, UserResponse, UserLogin
 from .utils import hash_password, verify_password
 from .jwt import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentification"])
 
-# Route POST /auth/register - inscription
+# --- Enregistrement d'un utilisateur ---
 @router.post("/register", response_model=UserResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    # Vérifier si l'email existe déjà
+    # Vérifier si l'email est déjà utilisé
     if db.query(User).filter(User.email == user.email).first():
         raise HTTPException(status_code=400, detail="Email déjà utilisé.")
 
-    # Créer un nouvel utilisateur avec mot de passe haché
+    # Hachage du mot de passe
     hashed_pwd = hash_password(user.password)
-    new_user = User(email=user.email, hashed_password=hashed_pwd)
+
+    # Création d'un nouvel utilisateur avec tous les champs
+    new_user = User(
+        email=user.email,
+        nom_utilisateur=user.nom_utilisateur,
+        telephone=user.telephone,
+        cni=user.cni,
+        role=user.role,
+        password=hashed_pwd
+    )
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
-# Route POST /auth/login - connexion
+# --- Connexion d'un utilisateur ---
 @router.post("/login")
-def login(user: UserCreate, db: Session = Depends(get_db)):
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    # Recherche de l'utilisateur par email
     db_user = db.query(User).filter(User.email == user.email).first()
 
-    # Vérifier que l'utilisateur existe et que le mot de passe est bon
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
+    # Vérification des identifiants
+    if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=400, detail="Identifiants incorrects.")
 
-    # Générer un token JWT pour cet utilisateur
+    # Création du token JWT
     token = create_access_token({"sub": db_user.email})
     return {"access_token": token, "token_type": "bearer"}
