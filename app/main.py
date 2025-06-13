@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.auth.routes import router as auth_router
 
@@ -46,6 +47,9 @@ app.include_router(rendez_vous_router)
 app.include_router(medias_router)
 app.include_router(problemes_router)
 app.include_router(recherche_router) # <-- AJOUTEZ CETTE LIGNE
+
+# Serve static files for uploaded media
+app.mount("/uploaded_media", StaticFiles(directory="uploaded_media"), name="uploaded_media")
 
 
 @app.get("/")

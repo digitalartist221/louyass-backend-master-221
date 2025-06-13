@@ -25,6 +25,8 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     hashed_password = user.password + "_hashed" # Remplacez par une fonction de hachage appropriée (ex: bcrypt)
 
     db_user = models.User(
+        nom=user.nom,
+        prenom=user.prenom,
         email=user.email,
         nom_utilisateur=user.nom_utilisateur,
         telephone=user.telephone,

@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_ # Import for filtering
 
-from app import models, schemas # Assuming schemas.py defines MaisonCreate, MaisonResponse, etc.
+from app import models, schemas 
 from app.database import get_db
-# from app.auth.jwt import get_current_user # Uncomment if you need authentication
+from app.auth.utils import get_current_user # Authentification via dépendance
 
 router = APIRouter(
     prefix="/maisons",  # Le préfixe de l'URL sera /maisons
@@ -18,17 +18,16 @@ router = APIRouter(
 def create_maison(
     maison: schemas.MaisonCreate,
     db: Session = Depends(get_db),
-    # current_user: models.User = Depends(get_current_user) # Exemple pour l'authentification
+    current_user: models.User = Depends(get_current_user) # L'utilisateur doit être authentifié
 ):
-    # Vérifier si le propriétaire_id existe (si l'utilisateur est authentifié, on pourrait utiliser current_user.id)
-    proprietaire = db.query(models.User).filter(models.User.id == maison.proprietaire_id).first()
-    if not proprietaire:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Propriétaire non trouvé."
-        )
+    # Assurez-vous que la maison est créée par l'utilisateur authentifié.
+    # On écrase le proprietaire_id du payload avec l'ID de l'utilisateur actuel.
+    # Ceci garantit que la maison est toujours liée à l'utilisateur connecté,
+    # et non à un ID potentiellement falsifié par le client.
+    maison_data = maison.model_dump() # Utiliser model_dump() pour Pydantic v2
+    maison_data["proprietaire_id"] = current_user.id 
 
-    db_maison = models.Maison(**maison.dict())
+    db_maison = models.Maison(**maison_data)
     db.add(db_maison)
     db.commit()
     db.refresh(db_maison)
@@ -40,9 +39,14 @@ def read_maisons(
     skip: int = 0,
     limit: int = 100,
     search_query: Optional[str] = None, # Pour la recherche par adresse ou description
+    proprietaire_id: Optional[int] = None, # Nouveau paramètre pour filtrer par propriétaire
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Maison)
+
+    # Filtrer par proprietaire_id si ce paramètre est fourni
+    if proprietaire_id is not None:
+        query = query.filter(models.Maison.proprietaire_id == proprietaire_id)
 
     if search_query:
         # Recherche insensible à la casse dans l'adresse ou la description
@@ -73,7 +77,7 @@ def update_maison(
     maison_id: int,
     maison_update: schemas.MaisonCreate, # Utilisez MaisonCreate ou un MaisonUpdate si vous avez des champs optionnels
     db: Session = Depends(get_db),
-    # current_user: models.User = Depends(get_current_user) # Exemple pour l'authentification
+    current_user: models.User = Depends(get_current_user) # L'utilisateur doit être authentifié
 ):
     db_maison = db.query(models.Maison).filter(models.Maison.id == maison_id).first()
     if db_maison is None:
@@ -82,15 +86,16 @@ def update_maison(
             detail="Maison non trouvée."
         )
 
-    # Assurez-vous que seul le propriétaire peut modifier sa maison
-    # if db_maison.proprietaire_id != current_user.id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Vous n'êtes pas autorisé à modifier cette maison."
-    #     )
+    # Vérifier si l'utilisateur authentifié est le propriétaire de la maison
+    if db_maison.proprietaire_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'êtes pas autorisé à modifier cette maison."
+        )
 
     # Mettre à jour les champs
-    for key, value in maison_update.dict(exclude_unset=True).items():
+    # Utilisation de model_dump(exclude_unset=True) pour Pydantic v2 afin de n'appliquer que les champs fournis
+    for key, value in maison_update.model_dump(exclude_unset=True).items():
         setattr(db_maison, key, value)
 
     db.add(db_maison)
@@ -103,7 +108,7 @@ def update_maison(
 def delete_maison(
     maison_id: int,
     db: Session = Depends(get_db),
-    # current_user: models.User = Depends(get_current_user) # Exemple pour l'authentification
+    current_user: models.User = Depends(get_current_user) # L'utilisateur doit être authentifié
 ):
     db_maison = db.query(models.Maison).filter(models.Maison.id == maison_id).first()
     if db_maison is None:
@@ -112,13 +117,14 @@ def delete_maison(
             detail="Maison non trouvée."
         )
 
-    # Assurez-vous que seul le propriétaire peut supprimer sa maison
-    # if db_maison.proprietaire_id != current_user.id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Vous n'êtes pas autorisé à supprimer cette maison."
-    #     )
+    # Vérifier si l'utilisateur authentifié est le propriétaire de la maison
+    if db_maison.proprietaire_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'êtes pas autorisé à supprimer cette maison."
+        )
 
     db.delete(db_maison)
     db.commit()
-    return {"message": "Maison supprimée avec succès."}
+    # Retourne une réponse vide pour le statut 204 No Content
+    return

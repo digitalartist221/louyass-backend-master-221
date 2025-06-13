@@ -6,12 +6,13 @@ from app.database import Base  # Assure-toi que Base = declarative_base()
 # --- Utilisateur ---
 class User(Base):
     __tablename__ = "users"
-
+    nom = Column(String, nullable=False)
+    prenom = Column(String, nullable=False)
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     nom_utilisateur = Column(String, nullable=True)
     telephone = Column(String, nullable=True)
-    cni = Column(String, unique=True, nullable=True)
+    cni = Column(Integer, unique=True, nullable=True)
     role = Column(String, nullable=False)  # proprietaire | locataire
     password = Column(String, nullable=False)
     cree_le = Column(DateTime, default=datetime.utcnow)
@@ -25,9 +26,11 @@ class User(Base):
 # --- Maison ---
 class Maison(Base):
     __tablename__ = "maisons"
-
+    nom = Column(String, nullable=False)
     id = Column(Integer, primary_key=True, index=True)
     adresse = Column(String, nullable=False)
+    ville = Column(String, nullable=False)
+    superficie = Column(Integer, nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     description = Column(String, nullable=True)
@@ -53,7 +56,7 @@ class Chambre(Base):
     prix = Column(Float, nullable=False)
     disponible = Column(Boolean, default=True)
     cree_le = Column(DateTime, default=datetime.utcnow)
-
+    capacite = Column(Integer, nullable=False)
     maison = relationship("Maison", back_populates="chambres")
     contrats = relationship("Contrat", back_populates="chambre")
     medias = relationship("Media", back_populates="chambre")

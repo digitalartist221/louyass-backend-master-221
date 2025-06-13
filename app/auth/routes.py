@@ -14,19 +14,18 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     # Vérifier si l'email est déjà utilisé
     if db.query(User).filter(User.email == user.email).first():
         raise HTTPException(status_code=400, detail="Email déjà utilisé.")
+    
+    # Vérifier si le CNI est déjà utilisé
+    if user.cni and db.query(User).filter(User.cni == user.cni).first():
+        raise HTTPException(status_code=400, detail="CNI déjà utilisé par un autre utilisateur.")
 
     # Hachage du mot de passe
     hashed_pwd = hash_password(user.password)
 
     # Création d'un nouvel utilisateur avec tous les champs
-    new_user = User(
-        email=user.email,
-        nom_utilisateur=user.nom_utilisateur,
-        telephone=user.telephone,
-        cni=user.cni,
-        role=user.role,
-        password=hashed_pwd
-    )
+    user_data = user.model_dump()  # Utiliser model_dump() pour Pydantic v2
+    user_data['password'] = hashed_pwd  # Ajouter le mot de passe haché
+    new_user = User(**user_data)  # Créer l'utilisateur avec tous les champs du schéma
 
     db.add(new_user)
     db.commit()
@@ -43,6 +42,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=400, detail="Identifiants incorrects.")
 
-    # Création du token JWT
-    token = create_access_token({"sub": db_user.email})
-    return {"access_token": token, "token_type": "bearer"}
+    # Création du token JWT avec l'ID de l'utilisateur
+    token = create_access_token({
+        "sub": db_user.email,
+        "user_id": db_user.id  # Ajout de l'ID de l'utilisateur pour la validation
+    })
+    return {"access_token": token, "token_type": "bearer", "user": db_user }

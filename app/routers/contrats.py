@@ -2,9 +2,10 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import date
-
+    
 from app import models, schemas
 from app.database import get_db
+from app.auth.utils import get_current_user
 
 router = APIRouter(
     prefix="/contrats",
@@ -79,13 +80,34 @@ def update_contrat(contrat_id: int, contrat_update: schemas.ContratCreate, db: S
     return db_contrat
 
 @router.delete("/{contrat_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_contrat(contrat_id: int, db: Session = Depends(get_db)):
+def delete_contrat(
+    contrat_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """
     Supprime un contrat par son ID.
     """
     db_contrat = db.query(models.Contrat).filter(models.Contrat.id == contrat_id).first()
     if db_contrat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contrat non trouvé")
+
+    # Vérifier que l'utilisateur a le droit de supprimer ce contrat
+    if db_contrat.locataire_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'êtes pas autorisé à supprimer ce contrat."
+        )
+
+    # Supprimer le contrat
     db.delete(db_contrat)
     db.commit()
+
+    # Marquer la chambre comme disponible si le contrat était actif
+    if db_contrat.statut == "actif":
+        db_chambre = db.query(models.Chambre).filter(models.Chambre.id == db_contrat.chambre_id).first()
+        if db_chambre:
+            db_chambre.disponible = True
+            db.commit()
+    
     return
