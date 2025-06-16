@@ -60,7 +60,7 @@ class Chambre(Base):
     maison = relationship("Maison", back_populates="chambres")
     contrats = relationship("Contrat", back_populates="chambre")
     medias = relationship("Media", back_populates="chambre")
-    rendezvous = relationship("RendezVous", back_populates="chambre")
+    rendezvous = relationship("RendezVous", back_populates="chambre", lazy='noload')
 
 
 # --- Contrat ---
@@ -111,9 +111,9 @@ class RendezVous(Base):
     date_heure = Column(DateTime, nullable=False)
     statut = Column(String, nullable=False)  # en_attente | confirmé | annulé
     cree_le = Column(DateTime, default=datetime.utcnow)
-
-    locataire = relationship("User", back_populates="rendezvous")
-    chambre = relationship("Chambre", back_populates="rendezvous")
+ 
+    locataire = relationship("User", back_populates="rendezvous", lazy='joined')
+    chambre = relationship("Chambre", back_populates="rendezvous", lazy='noload')
 
 
 # --- Media ---

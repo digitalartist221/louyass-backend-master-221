@@ -85,6 +85,49 @@ class ChambreResponse(ChambreBase):
     class Config:
         from_attributes = True
 
+# Schéma pour les détails de la Maison, à inclure dans la Chambre détaillée
+class MaisonDetails(BaseModel):
+    id: int
+    nom: str
+    adresse: str
+    ville: str
+    superficie: Optional[float] = None
+    latitude: Optional[float] = None # Ajout de la latitude
+    longitude: Optional[float] = None # Ajout de la longitude
+
+    class Config:
+        from_attributes = True
+
+# Schéma pour les détails d'un média de chambre
+class ChambreMediaSchema(BaseModel):
+    id: int
+    url: str
+    description: Optional[str] = None
+    est_principale: bool = False
+
+    class Config:
+        from_attributes = True
+
+# Schéma pour la réponse détaillée de la chambre
+class ChambreResponseDetailed(BaseModel):
+    id: int
+    titre: str
+    description: Optional[str] = None
+    prix: float
+    type: str
+    capacite: int
+    taille: Optional[float] = None
+    salle_de_bain: bool
+    meublee: bool
+    disponible: bool
+    cree_le: datetime
+    maison_id: int
+    maison: Optional[MaisonDetails] = None # Inclure les détails de la maison
+    medias: List[ChambreMediaSchema] = [] # Inclure la liste des médias
+
+    class Config:
+        from_attributes = True
+
 # --- Contract Schemas ---
 class ContratBase(BaseModel):
     locataire_id: int
@@ -126,23 +169,69 @@ class PaiementResponse(PaiementBase):
     class Config:
         from_attributes = True
 
-# --- Appointment Schemas ---
-class RendezVousBase(BaseModel):
+# --- Rendez-vous Schemas ---
+class RendezVousCreate(BaseModel):
     locataire_id: int
     chambre_id: int
     date_heure: datetime
-    statut: str  # en_attente | confirmé | annulé
+    statut: str = Field(default="en_attente")
+    # propose_nouvelle_date n'est pas inclus ici car c'est pour la modification par le propriétaire
 
-class RendezVousCreate(RendezVousBase):
-    pass
+class RendezVousUpdate(BaseModel): # Nouveau schéma pour les mises à jour
+    statut: Optional[str] = None
+    date_heure: Optional[datetime] = None # Si le locataire modifie la date/heure
 
-class RendezVousResponse(RendezVousBase):
+class SimpleUserResponse(BaseModel):
     id: int
-    cree_le: datetime
+    nom: str
+    email: EmailStr
 
     class Config:
         from_attributes = True
 
+class RendezVousResponse(BaseModel):
+    id: int
+    locataire_id: int
+    chambre_id: int
+    date_heure: datetime
+    statut: str
+    cree_le: datetime
+    locataire: Optional[SimpleUserResponse] = None
+    chambre: Optional[ChambreResponse] = None
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat()
+        }
+        json_loads = lambda x: x
+        json_dumps = lambda x: x
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "locataire_id": 1,
+                "chambre_id": 1,
+                "date_heure": "2025-06-14T19:08:53+02:00",
+                "statut": "en_attente",
+                "cree_le": "2025-06-14T19:08:53+02:00",
+                "locataire": {
+                    "id": 1,
+                    "nom": "John Doe",
+                    "email": "john@example.com"
+                },
+                "chambre": {
+                    "id": 1,
+                    "titre": "Chambre confortable",
+                    "prix": 500.0,
+                    "maison": {
+                        "id": 1,
+                        "adresse": "123 Rue de Paris",
+                        "ville": "Paris"
+                    }
+                }
+            }
+        }
+   
 # --- Media Schemas ---
 class MediaBase(BaseModel):
     chambre_id: int
@@ -204,6 +293,12 @@ class RechercheResult(BaseModel):
 
     class Config:
         from_attributes = True
+# --- Message de notification (pour l'email) ---
+class EmailMessage(BaseModel):
+    destinataire_email: str
+    sujet: str
+    corps: str
+
 
 # Résolution des forward references
 ChambreResponse.update_forward_refs()
@@ -335,13 +430,6 @@ class RendezVousBase(BaseModel):
 class RendezVousCreate(RendezVousBase):
     pass
 
-class RendezVousResponse(RendezVousBase):
-    id: int
-    cree_le: datetime
-
-    class Config:
-        from_attributes = True
-
 # --- Media Schemas ---
 class MediaBase(BaseModel):
     chambre_id: int
@@ -401,4 +489,5 @@ class RechercheResult(BaseModel):
     details: dict = Field(..., description="Détails spécifiques au type de bien (chambre ou maison)")
 
     class Config:
+        from_attributes = True # Très important pour la conversion automatiqu
         from_attributes = True # Très important pour la conversion automatiqu
