@@ -34,6 +34,7 @@ def create_maison(
     return db_maison
 
 # --- Opération CRUD : Lire toutes les Maisons ---
+
 @router.get("/", response_model=List[schemas.MaisonResponse])
 def read_maisons(
     skip: int = 0,
