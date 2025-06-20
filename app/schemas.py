@@ -47,20 +47,14 @@ class MaisonBase(BaseModel):
 class MaisonCreate(MaisonBase):
     proprietaire_id: int
 
-class MaisonResponse(BaseModel):
+class MaisonResponse(MaisonBase):
     id: int
     proprietaire_id: int
-    nom: str
-    adresse: str
-    ville: str
-    superficie: Optional[float] # Or int, depending on your data type. Make sure it's here and required.
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    description: Optional[str] = None
     cree_le: datetime
 
     class Config:
-        from_attributes = True # Or orm_mode = True for Pydantic v1
+        from_attributes = True
+
 # --- Room Schemas ---
 class ChambreBase(BaseModel):
     maison_id: int
@@ -404,8 +398,6 @@ class ContratCreate(ContratBase):
 class ContratResponse(ContratBase):
     id: int
     cree_le: datetime
-    locataire: Optional[SimpleUserResponse] = None # Optional, based on your backend logic
-    chambre: Optional[ChambreResponse] = None     # Optional, based on your backend logic
 
     class Config:
         from_attributes = True
