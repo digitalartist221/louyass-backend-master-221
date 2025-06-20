@@ -41,6 +41,7 @@ def create_chambre(
     db.refresh(db_chambre)
     return db_chambre
 
+@router.get("/mes-chambres", response_model=List[schemas.ChambreResponse], include_in_schema=False)
 @router.get("/", response_model=List[schemas.ChambreResponse])
 def read_chambres(
     skip: int = 0, 

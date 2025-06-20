@@ -14,6 +14,7 @@ from app.routers.rendez_vous import router as rendez_vous_router
 from app.routers.medias import router as medias_router
 from app.routers.problemes import router as problemes_router
 from app.routers.recherche import router as recherche_router # <-- AJOUTEZ CETTE LIGNE
+from app.routers.locataire_contrats import router as locataire_contrats_router  
 
 from app.database import Base, engine
 
@@ -47,7 +48,7 @@ app.include_router(rendez_vous_router)
 app.include_router(medias_router)
 app.include_router(problemes_router)
 app.include_router(recherche_router) # <-- AJOUTEZ CETTE LIGNE
-
+app.include_router(locataire_contrats_router)
 # Serve static files for uploaded media
 app.mount("/uploaded_media", StaticFiles(directory="uploaded_media"), name="uploaded_media")
 
