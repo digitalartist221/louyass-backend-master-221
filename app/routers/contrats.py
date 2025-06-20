@@ -27,6 +27,19 @@ def create_contrat(contrat: schemas.ContratCreate, db: Session = Depends(get_db)
     if not db_chambre:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chambre avec l'ID {contrat.chambre_id} non trouvée.")
 
+    # Vérifier si la chambre est déjà réservée pendant la période demandée
+    existing_contrats = db.query(models.Contrat).filter(
+        models.Contrat.chambre_id == contrat.chambre_id,
+        models.Contrat.date_fin >= contrat.date_debut,
+        models.Contrat.date_debut <= contrat.date_fin
+    ).all()
+
+    if existing_contrats:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La chambre est déjà réservée pendant cette période."
+        )
+
     db_contrat = models.Contrat(**contrat.model_dump())
     db.add(db_contrat)
     db.commit()
