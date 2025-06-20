@@ -491,3 +491,15 @@ class RechercheResult(BaseModel):
     class Config:
         from_attributes = True # Très important pour la conversion automatiqu
         from_attributes = True # Très important pour la conversion automatiqu
+
+
+# Detailed payment response including chambre and locataire details
+class PaiementDetailResponse(PaiementBase):
+    id: int
+    cree_le: datetime
+    contrat: ContratResponse
+    chambre: ChambreResponse
+    locataire: SimpleUserResponse
+
+    class Config:
+        from_attributes = True
