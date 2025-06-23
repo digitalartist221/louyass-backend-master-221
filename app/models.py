@@ -113,7 +113,7 @@ class RendezVous(Base):
     cree_le = Column(DateTime, default=datetime.utcnow)
  
     locataire = relationship("User", back_populates="rendezvous", lazy='joined')
-    chambre = relationship("Chambre", back_populates="rendezvous", lazy='noload')
+    chambre = relationship("Chambre", back_populates="rendezvous", lazy='joined')
 
 
 # --- Media ---

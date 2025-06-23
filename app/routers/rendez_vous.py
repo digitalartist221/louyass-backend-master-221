@@ -210,20 +210,29 @@ def create_rendez_vous(
     db.add(db_rdv)
     db.commit()
     
-    # Recharger les relations pour les emails
-    db_rdv = db.query(models.RendezVous).options(
-        joinedload(models.RendezVous.locataire),
-        joinedload(models.RendezVous.chambre).joinedload(models.Chambre.maison).joinedload(models.Maison.proprietaire)
-    ).filter(models.RendezVous.id == db_rdv.id).first()
+    # Recharger le rendez-vous avec toutes les relations
+    db_rdv = db.query(models.RendezVous).filter(models.RendezVous.id == db_rdv.id).first()
+
+    if not db_rdv:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors du chargement du rendez-vous"
+        )
 
     # Envoyer email au locataire
     subject, html_body = generate_email_body(db_rdv, "en_attente")
     background_tasks.add_task(send_email, current_user.email, subject, html_body, html_body)
 
     # Envoyer notification au propriétaire
-    owner_email = db_rdv.chambre.maison.proprietaire.email
-    owner_subject, owner_html = generate_owner_notification(db_rdv, "creation")
-    background_tasks.add_task(send_email, owner_email, owner_subject, owner_html, owner_html)
+    if db_rdv.chambre.maison and db_rdv.chambre.maison.proprietaire:
+        owner_email = db_rdv.chambre.maison.proprietaire.email
+        owner_subject, owner_html = generate_owner_notification(db_rdv, "creation")
+        background_tasks.add_task(send_email, owner_email, owner_subject, owner_html, owner_html)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="La maison ou le propriétaire associé à la chambre n'a pas été trouvé"
+        )
 
     # Assurez-vous que la réponse contient toutes les relations nécessaires
     return schemas.RendezVousResponse(
